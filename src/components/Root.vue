@@ -4,6 +4,9 @@
     <p class="text-gray-500 my-2 text-sm">
       从 Stable Diffusion 生成的图片读取 prompt / Stable Diffusion 模型解析
     </p>
+    <div class="text-center my-2">
+      <a href="https://tag.kaermorh.icu">Danbooru Tag清洗工具</a>
+    </div>
     <div v-if="imgFileRef" class="my-6">
       <div class="bg-white max-w-720px mx-auto border border-gray-300 p-2" v-if="imageRef">
         <img v-if="imageRef" v-bind="imageRef" alt="" style="display: block; width: auto; height: 30vh; margin:auto" />
@@ -110,8 +113,6 @@
         <a class="text-gray-500" href="https://space.bilibili.com/12566101">秋葉aaaki</a>
         <a> | </a>
         <a class="text-gray-500" href="https://github.com/KaerMorh">KaerMorh</a>
-        <a> | </a>
-        <a class="text-gray-500" href="https://novelai.dev">NovelAI.Dev</a>
       </span>
     </div>
   </div>
