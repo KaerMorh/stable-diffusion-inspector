@@ -40,6 +40,24 @@
           <json-viewer :value="jsonData" v-if="jsonData != null && showJsonViewer(item.key)" :expand-depth=4>
           </json-viewer>
         </div>
+
+        <!-- 新增的原始尺寸和换算后尺寸展示 -->
+        <div class="bg-white border-b border-l border-r px-4 border-b-gray-300 border-l-gray-300 border-r-gray-300 py-2">
+          <h1 class="font-semibold text-sm text-gray-800">原始尺寸</h1>
+          <p class="text-wrap break-all text-sm mt-1 text-gray-600" style="white-space: pre-wrap">
+            宽度: {{ originalWidth }} px<br />
+            高度: {{ originalHeight }} px<br />
+            宽高比: {{ originalRatio }}
+          </p>
+        </div>
+        <div class="bg-white border-b border-l border-r px-4 border-b-gray-300 border-l-gray-300 border-r-gray-300 py-2">
+          <h1 class="font-semibold text-sm text-gray-800">换算后尺寸</h1>
+          <p class="text-wrap break-all text-sm mt-1 text-gray-600" style="white-space: pre-wrap">
+            宽度: {{ convertedWidth }} px<br />
+            高度: {{ convertedHeight }} px<br />
+            宽高比: {{ convertedRatio }}
+          </p>
+        </div>
       </div>
 
       <div v-if="exifRef" class="mt-4 text-left max-w-740px mx-auto">
@@ -82,7 +100,7 @@
     <div class="my-4 pt-4">
       如果您觉得本项目对您有帮助 请在 →
       <a class="inline-block text-sm text-gray-500"
-        href="https://github.com/Akegarasu/stable-diffusion-inspector">GitHub</a>
+        href="https://github.com/KaerMorh/stable-diffusion-inspector">GitHub</a>
       ←上点个star
       <br />
       <span class="inline-block mt-2 text-sm text-gray-500">
@@ -90,6 +108,8 @@
         <a class="text-gray-500" href="https://github.com/Akegarasu">@Akegarasu</a>
         <a> | </a>
         <a class="text-gray-500" href="https://space.bilibili.com/12566101">秋葉aaaki</a>
+        <a> | </a>
+        <a class="text-gray-500" href="https://github.com/KaerMorh">KaerMorh</a>
         <a> | </a>
         <a class="text-gray-500" href="https://novelai.dev">NovelAI.Dev</a>
       </span>
@@ -110,7 +130,7 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import ExifReader from "exifreader";
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import prettyBytes from "pretty-bytes";
 import extractChunks from "png-chunks-extract";
 import text from "png-chunk-text";
@@ -198,6 +218,67 @@ const showJsonViewer = (title) => {
   return false;
 };
 
+// 新增的响应式数据
+const originalWidth = ref(0);
+const originalHeight = ref(0);
+const originalRatio = computed(() => {
+  return originalHeight.value === 0 ? "0" : (originalWidth.value / originalHeight.value).toFixed(2);
+});
+
+const convertedWidth = ref(0);
+const convertedHeight = ref(0);
+const convertedRatio = computed(() => {
+  return convertedHeight.value === 0 ? "0" : (convertedWidth.value / convertedHeight.value).toFixed(2);
+});
+
+// 换算尺寸的函数
+function calculateConvertedDimensions(width: number, height: number) {
+  const maxSum = 2048;
+  const targetRatio = width / height;
+  let newWidth = 0;
+  let newHeight = 0;
+
+  // 寻找符合条件的高度
+  for (let h = Math.floor(maxSum / 2); h >= 64; h -= 64) {
+    let w = Math.round(h * targetRatio / 64) * 64;
+    if (w + h <= maxSum) {
+      newWidth = w;
+      newHeight = h;
+      break;
+    }
+  }
+
+  // 如果未找到合适的宽高，则设置为最小值
+  if (newWidth === 0 || newHeight === 0) {
+    newWidth = 64;
+    newHeight = 64;
+  }
+
+  convertedWidth.value = newWidth;
+  convertedHeight.value = newHeight;
+}
+
+// 修改 inspectImage 函数
+const inspectImage = async (file) => {
+  await readImageBase64();
+
+  // 获取图片的真实宽高
+  const img = new Image();
+  img.src = imageRef.value.src;
+  await new Promise((resolve) => {
+    img.onload = () => {
+      originalWidth.value = img.width;
+      originalHeight.value = img.height;
+      calculateConvertedDimensions(img.width, img.height);
+      resolve(null);
+    };
+  });
+
+  exifRef.value = await readExif(file);
+  imgfileInfoRef.value = await readFileInfo(file);
+};
+
+// 修改 cleanData 函数，重置新增的数据
 const cleanData = () => {
   imgFileRef.value = null
   modelFileRef.value = null
@@ -205,6 +286,10 @@ const cleanData = () => {
   modelFileInfoRef.value = null
   exifRef.value = null
   jsonData.value = null
+  originalWidth.value = 0;
+  originalHeight.value = 0;
+  convertedWidth.value = 0;
+  convertedHeight.value = 0;
 }
 
 async function handleUpload(file) {
@@ -225,12 +310,6 @@ async function handleUpload(file) {
     });
   }
   return false;
-}
-
-const inspectImage = async (file) => {
-  await readImageBase64()
-  exifRef.value = await readExif(file)
-  imgfileInfoRef.value = await readFileInfo(file)
 }
 
 const inspectModel = async (file) => {
