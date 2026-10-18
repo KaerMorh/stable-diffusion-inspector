@@ -239,10 +239,10 @@ function calculateConvertedDimensions(width: number, height: number) {
   let newWidth = 0;
   let newHeight = 0;
 
-  // 寻找符合条件的高度
-  for (let h = Math.floor(maxSum / 2); h >= 64; h -= 64) {
+  // 从最大可用高度开始寻找，为宽度预留至少 64 像素
+  for (let h = maxSum - 64; h >= 64; h -= 64) {
     let w = Math.round(h * targetRatio / 64) * 64;
-    if (w + h <= maxSum) {
+    if (w >= 64 && w + h <= maxSum) {
       newWidth = w;
       newHeight = h;
       break;
